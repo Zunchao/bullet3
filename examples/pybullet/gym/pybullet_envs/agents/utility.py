@@ -24,7 +24,8 @@ import re
 
 import ruamel.yaml as yaml
 import tensorflow as tf
-
+import sys
+sys.path.append('~/ws_ros/src/bullet3/examples/pybullet/gym/pybullet_envs/agents')
 from . import tools
 
 
@@ -172,6 +173,7 @@ def load_config(logdir):
     Configuration object.
   """
   config_path = logdir and os.path.join(logdir, 'config.yaml')
+  # print('confipath : ', config_path)
   if not config_path or not tf.gfile.Exists(config_path):
     message = (
         'Cannot resume an existing run since the logging directory does not '

@@ -24,11 +24,11 @@ from __future__ import division
 from __future__ import print_function
 
 import datetime
-import os
 
 import gym
 import tensorflow as tf
-
+import sys, os
+sys.path.append('/home/zheng/ws_ros/src/bullet3/examples/pybullet/gym/pybullet_envs/agents')
 from . import tools
 from . import configs
 from . import utility

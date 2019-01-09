@@ -19,19 +19,23 @@ from __future__ import division
 from __future__ import print_function
 
 import functools
-
-from . import ppo
-from . import networks
+import sys
+sys.path.append('/home/zheng/ws_ros/src/bullet3/examples/pybullet/gym/pybullet_envs/')
+from pybullet_envs.agents import ppo
+from pybullet_envs.agents import networks
 from pybullet_envs.bullet import minitaur_gym_env
 from pybullet_envs.bullet import minitaur_duck_gym_env
 from pybullet_envs.bullet import minitaur_env_randomizer
 import pybullet_envs.bullet.minitaur_gym_env as minitaur_gym_env
 import pybullet_envs
 import tensorflow as tf
+import pybullet_envs.bullet.mmKukaHuskyGymEnv as mmKukaHuskyGymEnv
+
 
 def default():
   """Default configuration for PPO."""
   # General
+  # help(mmKukaHuskyGymEnv)
   algorithm = ppo.PPOAlgorithm
   num_agents = 30
   eval_episodes = 30
@@ -158,3 +162,11 @@ def pybullet_duck_minitaur():
   steps = 3e7  # 30M
   return locals()
 
+def pybullet_kukahusky_reaching():
+  """Configuration for Bullet Kukahusky mm task."""
+  locals().update(default())
+  env = functools.partial(mmKukaHuskyGymEnv.MMKukaHuskyGymEnv, isDiscrete=False, renders=False, action_dim = 9, rewardtype='rdense')
+  # Environment
+  max_length = 1000
+  steps = 3e7  # 30M
+  return locals()

@@ -3,7 +3,6 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 print ("current_dir=" + currentdir)
 os.sys.path.insert(0,currentdir)
 
-import math
 import gym
 from gym import spaces
 from gym.utils import seeding

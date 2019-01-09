@@ -37,8 +37,8 @@ def main():
 	    action=[targetVelocity,steeringAngle]
 	  state, reward, done, info = environment.step(action)
 	  obs = environment.getExtendedObservation()
-	  print("obs")
-	  print(obs)
+	  #print("obs")
+	  #print(obs)
 
 if __name__=="__main__":
     main()

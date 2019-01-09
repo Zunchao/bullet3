@@ -25,7 +25,7 @@ import time
 
 import tensorflow as tf
 from pybullet_envs.agents import utility
-from pybullet_envs.minitaur.agents import simple_ppo_agent
+from pybullet_envs.minitaur.envs import simple_ppo_agent
 
 flags = tf.app.flags
 FLAGS = tf.app.flags.FLAGS

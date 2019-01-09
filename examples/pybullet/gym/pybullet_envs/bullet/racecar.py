@@ -14,8 +14,8 @@ class Racecar:
 	def reset(self):
 		car = self._p.loadURDF(os.path.join(self.urdfRootPath,"racecar/racecar_differential.urdf"), [0,0,.2],useFixedBase=False)
 		self.racecarUniqueId = car
-		#for i in range (self._p.getNumJoints(car)):
-		#	print (self._p.getJointInfo(car,i))
+		for i in range (self._p.getNumJoints(car)):
+			print (self._p.getJointInfo(car,i))
 		for wheel in range(self._p.getNumJoints(car)):
 				self._p.setJointMotorControl2(car,wheel,self._p.VELOCITY_CONTROL,targetVelocity=0,force=0)
 				self._p.getJointInfo(car,wheel)	
@@ -80,4 +80,3 @@ class Racecar:
 			self._p.setJointMotorControl2(self.racecarUniqueId,motor,self._p.VELOCITY_CONTROL,targetVelocity=targetVelocity,force=self.maxForce)
 		for steer in self.steeringLinks:
 			self._p.setJointMotorControl2(self.racecarUniqueId,steer,self._p.POSITION_CONTROL,targetPosition=steeringAngle)
-

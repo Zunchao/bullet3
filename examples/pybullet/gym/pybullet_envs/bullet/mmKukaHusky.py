@@ -1,9 +1,6 @@
-import os, inspect
-
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(os.path.dirname(currentdir))
-os.sys.path.insert(0, parentdir)
-
+import os
+import sys
+sys.path.append('/home/zheng/ws_ros/src/bullet3/examples/pybullet/gym/pybullet_envs/')
 import pybullet as p
 import pybullet_data
 import math
@@ -38,12 +35,12 @@ class MMKukaHusky:
                                    [0.002328,-0.000984,0.996491,0.083659])
         self.kukaUid = p.loadURDF(os.path.join(self.urdfRootPath, "kuka_iiwa/model_free_base.urdf"),
                                   [0.193749,0.345564,0.420208], [0.002327,-0.000988,0.996491,0.083659])
-
+        '''
         for i in range (p.getNumJoints(self.huskyUid)):
             print(p.getJointInfo(self.huskyUid,i))
         for i in range (p.getNumJoints(self.kukaUid)):
             print(p.getJointInfo(self.kukaUid,i))
-
+        '''
         p.createConstraint(self.huskyUid, -1, self.kukaUid, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0., 0., -.5], [0, 0, 0, 1])
 
 
@@ -118,7 +115,8 @@ class MMKukaHusky:
 
         observation.extend(list(pos))
         observation.extend(list(vel))
-        #observation.extend(list(euler))
+        # observation.extend(list(euler))
+        #print('o', observation, list(pos))
 
         return observation
 
@@ -134,6 +132,30 @@ class MMKukaHusky:
             closeEnough = (dist2 < threshold)
             iter = iter + 1
         return jointPoses
+
+    def check_jointstates(self, joint_state, delta_j):
+        if (abs(joint_state[0]) > 2.967):
+            joint_state[0] = joint_state[0] - delta_j[0]
+
+        if abs(joint_state[1]) > 2.094:
+            joint_state[1] = joint_state[1] - delta_j[1]
+
+        if abs(joint_state[2]) > 2.967:
+            joint_state[2] = joint_state[2] - delta_j[2]
+
+        if abs(joint_state[3]) > 2.094:
+            joint_state[3] = joint_state[3] - delta_j[3]
+
+        if abs(joint_state[4]) > 2.967:
+            joint_state[4] = joint_state[4] - delta_j[4]
+
+        if abs(joint_state[5]) > 2.094:
+            joint_state[5] = joint_state[5] - delta_j[5]
+
+        if abs(joint_state[6]) > 3.054:
+            joint_state[6] = joint_state[6] - delta_j[6]
+
+        return joint_state
 
     def applyAction(self, motorCommands):
         # action of arm joint states changes
@@ -161,13 +183,14 @@ class MMKukaHusky:
         # action of arm ee position changes
         elif (len(motorCommands) == 9):
             dp = motorCommands[0:7]
-            self.jointstates = self.jointstates + dp
             # baseVel is the translational speed of husky
             self.baseVel = motorCommands[7]
             # baseAng is the rotational speed of husky
             self.baseAng = motorCommands[8]
 
             self.jointstates = [x+y for x, y in zip(self.jointstates, dp)]
+            self.jointstates = self.check_jointstates(self.jointstates, dp)
+            # print('jointstate : ', self.jointstates, abs(-9))
             jointPoses = self.jointstates
 
         self.wheelVelR = (2 * self.baseVel + 0.555 * self.baseAng) / 2

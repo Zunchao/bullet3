@@ -28,10 +28,11 @@ import os
 
 import gym
 import tensorflow as tf
-
+import sys
+sys.path.append('/home/zheng/ws_ros/src/bullet3/examples/pybullet/gym/pybullet_envs/agents')
+#print('sys2',sys.path)
 from . import tools
 from . import utility
-
 
 def _create_environment(config, outdir):
   """Constructor for an instance of the environment.
@@ -118,6 +119,9 @@ def visualize(
 
 def main(_):
   """Load a trained algorithm and render videos."""
+
+  # help(tools)
+  # print('path',sys.path)
   utility.set_up_logging()
   if not FLAGS.logdir or not FLAGS.outdir:
     raise KeyError('You must specify logging and outdirs directories.')

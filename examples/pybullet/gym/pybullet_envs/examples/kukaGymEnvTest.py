@@ -32,6 +32,7 @@ def main():
 	  action=[]
 	  for motorId in motorsIds:
 	    action.append(environment._p.readUserDebugParameter(motorId))
+	  #print('action。 ', action)
 	  
 	  state, reward, done, info = environment.step2(action)
 	  obs = environment.getExtendedObservation()

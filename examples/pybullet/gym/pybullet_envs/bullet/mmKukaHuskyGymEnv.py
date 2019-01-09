@@ -1,8 +1,5 @@
-import os, inspect
-
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-print("current_dir=" + currentdir)
-os.sys.path.insert(0, currentdir)
+import sys, os
+sys.path.append('/home/zheng/ws_ros/src/bullet3/examples/pybullet/gym/pybullet_envs/')
 
 import math
 import gym
@@ -15,6 +12,10 @@ from . import mmKukaHusky
 import random
 import pybullet_data
 from pkg_resources import parse_version
+import pyglet
+
+
+pyglet.clock.set_fps_limit(10000)
 
 largeValObservation = 100
 
@@ -36,7 +37,8 @@ class MMKukaHuskyGymEnv(gym.Env):
                  renders=False,
                  isDiscrete=False,
                  maxSteps=1000,
-                 action_dim = 5):
+                 action_dim = 9,
+                 rewardtype='rdense'):
         self._isDiscrete = isDiscrete
         self._timeStep = 1. / 240.
         self._urdfRoot = urdfRoot
@@ -47,17 +49,20 @@ class MMKukaHuskyGymEnv(gym.Env):
         self._renders = renders
         self._maxSteps = maxSteps
         self.terminated = 0
-        self._cam_dist = 1.3
+        self._cam_dist = 4 #1.3
         self._cam_yaw = 180
         self._cam_pitch = -40
+        self._rewardtype = rewardtype
         self._action_dim = action_dim
+        self.dis = 100
+        self._dis_vor = 100 # changes between the current and former distance
 
         self._p = p
         if self._renders:
             cid = p.connect(p.SHARED_MEMORY)
             if (cid < 0):
                 cid = p.connect(p.GUI)
-            p.resetDebugVisualizerCamera(1.3, 180, -41, [0.52, -0.2, -0.33])
+            p.resetDebugVisualizerCamera(self._cam_dist, self._cam_yaw, self._cam_pitch, [0.52, -0.2, -0.33])
         else:
             p.connect(p.DIRECT)
         # timinglog = p.startStateLogging(p.STATE_LOGGING_PROFILE_TIMINGS, "kukaTimings.json")
@@ -77,9 +82,10 @@ class MMKukaHuskyGymEnv(gym.Env):
                 action_high = np.array([0.01, 0.01, 0.01, 1, 2])
             elif (self._action_dim == 9):
                 action_high = np.array([0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 1, 2])
-            self.action_space = spaces.Box(-action_high, action_high)
-        self.observation_space = spaces.Box(-observation_high, observation_high)
+            self.action_space = spaces.Box(low=-action_high, high=action_high, dtype=np.float32)
+        self.observation_space = spaces.Box(low=-observation_high, high=observation_high, dtype=np.float32)
         self.viewer = None
+        # help(mmKukaHusky)
 
     def _reset(self):
         self.terminated = 0
@@ -100,6 +106,7 @@ class MMKukaHuskyGymEnv(gym.Env):
         self._envStepCounter = 0
         p.stepSimulation()
         self._observation = self.getExtendedObservation()
+        #self._observation.extend(list(self.goal))
         return np.array(self._observation)
 
     def __del__(self):
@@ -110,7 +117,13 @@ class MMKukaHuskyGymEnv(gym.Env):
         return [seed]
 
     def getExtendedObservation(self):
-        self._observation = self._mmkukahusky.getObservation()
+        observation = self._mmkukahusky.getObservation()
+        #observation.append(self.goal)
+        for i in [3,4,5]:
+            observation[i] = self.goal[i-3]
+        # self._observation = [self.dis]
+        self._observation = observation
+        # print(self._observation)
         return self._observation
 
     def _step(self, action):
@@ -123,6 +136,7 @@ class MMKukaHuskyGymEnv(gym.Env):
         if self._renders:
             time.sleep(self._timeStep)
         self._observation = self.getExtendedObservation()
+        self._actions = action
 
         done = self._termination()
         reward = self._reward()
@@ -134,6 +148,7 @@ class MMKukaHuskyGymEnv(gym.Env):
             return np.array([])
 
         base_pos, orn = self._p.getBasePositionAndOrientation(self._mmkukahusky.huskyUid)
+        ''''''
         view_matrix = self._p.computeViewMatrixFromYawPitchRoll(
             cameraTargetPosition=base_pos,
             distance=self._cam_dist,
@@ -166,7 +181,7 @@ class MMKukaHuskyGymEnv(gym.Env):
         disvec = [x-y for x, y in zip(actualEndEffectorPos, self.goal)]
         dis = np.linalg.norm(disvec)
 
-        if (dis<0.1):  # (actualEndEffectorPos[2] <= -0.43):
+        if dis < 0.1:  # (actualEndEffectorPos[2] <= -0.43):
             self.terminated = 1
             self._observation = self.getExtendedObservation()
             print('terminate:', self._observation, dis,self.goal)
@@ -177,9 +192,42 @@ class MMKukaHuskyGymEnv(gym.Env):
         state = p.getLinkState(self._mmkukahusky.kukaUid, self._mmkukahusky.kukaEndEffectorIndex)
         actualEndEffectorPos = state[0]
         disvec = [x-y for x, y in zip(actualEndEffectorPos, self.goal)]
-        dis = np.linalg.norm(disvec)
-        reward = -dis
+        self.dis = np.linalg.norm(disvec)
+        delta_dis = self.dis - self._dis_vor
+        self._dis_vor = self.dis
+        if self._rewardtype == 'rdense':
+            reward = -self.dis - np.linalg.norm(self._actions)
+        elif self._rewardtype == 'rsparse':
+            if delta_dis > 0:
+                reward = 0
+            else:
+                reward = 1
+
         return reward
+
+    def _sample_action(self):
+        if self._isDiscrete == False:
+            '''
+            if (self._action_dim == 5):
+                a = np.random.choice(list(range(3)))
+                action = np.array([0.01, 0.01, 0.01, 1, 2])
+            elif (self._action_dim == 9):
+                action = np.random.choice(list(range(3)))
+        else:
+        '''
+            if (self._action_dim == 5):
+                action = np.array(
+                    [random.uniform(-0.01, 0.01), random.uniform(-0.01, 0.01), random.uniform(-0.01, 0.01),
+                     random.uniform(-1, 1), random.uniform(-2, 2)])
+            elif (self._action_dim == 9):
+                action = np.array([random.uniform(-0.01, 0.01), random.uniform(-0.01, 0.01), random.uniform(-0.01, 0.01),
+                                   random.uniform(-0.01, 0.01), random.uniform(-0.01, 0.01), random.uniform(-0.01, 0.01),
+                                   random.uniform(-0.01, 0.01), random.uniform(-1, 1), random.uniform(-2, 2)])
+                #a = np.random.uniform(*self.action_bound, size=self.action_dim)
+        return action
+
+    def set_fps(self, fps=30):
+        pyglet.clock.set_fps_limit(fps)
 
     if parse_version(gym.__version__) >= parse_version('0.9.6'):
         render = _render
